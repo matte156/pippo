@@ -4,9 +4,9 @@
 
 typedef struct
 {
-    char notContained[5];
-    char wrongPosition[5];
-    char correctPosition[5];
+    char notContained[6];
+    char wrongPosition[6];
+    char correctPosition[6];
 } response;
 
 int contains(char c, char *word)
@@ -22,9 +22,11 @@ response compare(char *guessWord, char *targetWord)
     response res;
     for(int i = 0; i < 5; i++)
     {
-	res.correctPosition[i] = guessWord[i] == targetWord[i] ? targetWord[i] : -1;
-	res.wrongPosition[i] = contains(guessWord[i], targetWord) == 1 ? guessWord[i] : -1;
+	res.correctPosition[i] = guessWord[i] == targetWord[i] ? targetWord[i] : 'X';
+	res.wrongPosition[i] = contains(guessWord[i], targetWord) == 1 ? guessWord[i] : 'X';
     }
+    res.correctPosition[5] = res.wrongPosition[5] = '\0';
+    printf("Target: %s\nCorrect: %s\nWrong position: %s\n", targetWord, res.correctPosition, res.wrongPosition);
 
     return res;
 }
@@ -67,30 +69,51 @@ int shell(int wordPosition, char *dataset, int size)
 	printf("> ");
 	int counter = 0;
 	char input[6], c;
-	while((input[counter++] = getchar()) != '\n' && counter < 6)
-	    ;
-	while(input[5] != '\n' && getchar() != '\n');
-	input[5] = '\0';
 
-	if(input[0] == EOF)
-	    return 0;
+	while((input[counter++] = getchar()) != '\n' && counter < 6)
+	{
+	    if(input[counter-1] == EOF)
+	    {
+		putchar('\n');
+	        return 0;
+	    }
+	}
 
 	int valid = 1;
+	
+	// clear stdin
+	while(counter == 6 && input[5] != '\n' && getchar() != '\n') valid = 0;
+	if(valid == 0 || counter != 6)
+	{
+	    printf("\033[0;31mLa parola deve essere di 5 lettere\033[0m\n");
+	    continue;
+	}
+
+	// termina la stringa con \0
+	input[5] = '\0';
+	
+	// check if word typed in is correct
+	valid = 1;
 	for(int i = 0; i < 5; i++)
 	    if(!((input[i] >= 'a' && input[i] <= 'z') || (input[i] >= 'A' && input[i] <= 'Z')))
 		valid = 0;
 
 	if(valid == 0)
+	{
+	    printf("\033[0;31mInserisci una parola reale\033[0m\n");
 	    continue;
+	}
 
 	response res = compare(input, &dataset[wordPosition*6]);
+	printf("Correct: %s\nWrong position: %s\n", res.correctPosition, res.wrongPosition);
+
 
 	for(int i = 0; i < 5; i++)
 	{
-	    if(res.correctPosition[i] != -1)
-		printf("\033[0:32m%c\033[0m", res.correctPosition[i]);
-	    else if(res.wrongPosition[i] != -1)
-		printf("\033[0:33m%c\033[0m", res.wrongPosition[i]);
+	    if(res.correctPosition[i] != 'X')
+		printf("\033[0;32m%c\033[0m", res.correctPosition[i]);
+	    else if(res.wrongPosition[i] != 'X')
+		printf("\033[0;33m%c\033[0m", res.wrongPosition[i]);
 	    else
 		putchar(input[i]);
 	}
