@@ -12,20 +12,25 @@ typedef struct
 
 int contains(char c, char *word)
 {
+    int numberOfLettersContained = 0;
     for(int i = 0; i < 5; i++)
 	if(c==word[i])
-	    return 1;
-    return 0;
+	    numberOfLettersContained++;
+    return numberOfLettersContained;
 }
 
 response compare(char *guessWord, char *targetWord)
 {
     response res;
     for(int i = 0; i < 5; i++)
-    {
 	res.correctPosition[i] = guessWord[i] == targetWord[i] ? targetWord[i] : 'X';
-	res.wrongPosition[i] = contains(guessWord[i], targetWord) == 1 && contains(guessWord[i], res.correctPosition) == 0 ? guessWord[i] : 'X';
-    }
+
+    for(int i = 0; i < 5; i++)
+	res.wrongPosition[i] = (contains(guessWord[i], targetWord) - 
+			       contains(guessWord[i], res.correctPosition) -
+			       contains(guessWord[i], res.wrongPosition)) > 0 &&
+	       		       res.correctPosition[i] == 'X' ? guessWord[i] : 'X';
+
     res.correctPosition[5] = res.wrongPosition[5] = '\0';
 
     return res;
@@ -99,6 +104,8 @@ int shell(int wordPosition, char *dataset, int size)
 	    if(!((input[i] >= 'a' && input[i] <= 'z') || (input[i] >= 'A' && input[i] <= 'Z')))
 		valid = 0;
 
+	// per debug. Rimuovere
+	valid = 1;
 	if(valid == 0)
 	{
 	    printf("\033[0;31mInserisci una parola reale\033[0m\n");
@@ -138,7 +145,7 @@ int shell(int wordPosition, char *dataset, int size)
 int main()
 {
     puts("\033[0m");
-    FILE *fp = fopen("dataset-ascii.txt", "r");
+    FILE *fp = fopen("usefulDataset/dataset-ascii.txt", "r");
 
     // checking number of lines
     int linecounter = 0;
@@ -157,7 +164,7 @@ int main()
     srand(time(NULL));
     int wordIndex = rand() % linecounter;
 
-    char debugWord[] = "tonfo";
+    char debugWord[] = "abbey";
     shell(0, debugWord, 1);
 
     free(dataset);
