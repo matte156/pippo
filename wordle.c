@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<time.h>
+#include<string.h>
 
 typedef struct
 {
@@ -23,10 +24,9 @@ response compare(char *guessWord, char *targetWord)
     for(int i = 0; i < 5; i++)
     {
 	res.correctPosition[i] = guessWord[i] == targetWord[i] ? targetWord[i] : 'X';
-	res.wrongPosition[i] = contains(guessWord[i], targetWord) == 1 ? guessWord[i] : 'X';
+	res.wrongPosition[i] = contains(guessWord[i], targetWord) == 1 && contains(guessWord[i], res.correctPosition) == 0 ? guessWord[i] : 'X';
     }
     res.correctPosition[5] = res.wrongPosition[5] = '\0';
-    printf("Target: %s\nCorrect: %s\nWrong position: %s\n", targetWord, res.correctPosition, res.wrongPosition);
 
     return res;
 }
@@ -64,9 +64,10 @@ int checkWordExistence(char *word, char *dataset, int size)
 
 int shell(int wordPosition, char *dataset, int size)
 {
-    while(1)
+    int attempts = 0;
+    while(attempts < 6)
     {
-	printf("> ");
+	printf("%d> ", attempts);
 	int counter = 0;
 	char input[6], c;
 
@@ -105,46 +106,60 @@ int shell(int wordPosition, char *dataset, int size)
 	}
 
 	response res = compare(input, &dataset[wordPosition*6]);
-	printf("Correct: %s\nWrong position: %s\n", res.correctPosition, res.wrongPosition);
-
 
 	for(int i = 0; i < 5; i++)
 	{
 	    if(res.correctPosition[i] != 'X')
-		printf("\033[0;32m%c\033[0m", res.correctPosition[i]);
+		printf("\033[32;1;1m%c\033[0m", res.correctPosition[i]);
 	    else if(res.wrongPosition[i] != 'X')
-		printf("\033[0;33m%c\033[0m", res.wrongPosition[i]);
+		printf("\033[33;1m%c\033[0m", res.wrongPosition[i]);
 	    else
 		putchar(input[i]);
 	}
 	putchar('\n');
-//	printf("Word %s %s\n", input, checkWordExistence(input, dataset, size) == 1 ? "exist" : "not exist");
+
+	if(strcmp(input, &dataset[wordPosition*6]) == 0)
+	{
+	    printf("Hai vinto!\n");
+	    return 0;
+	}
+	if(attempts == 5)
+	{
+	    printf("Hai perso!\n");
+	    return 1;
+	}
+
+	attempts++;
+
     }
+    return 0;
 }
 
 int main()
 {
-	FILE *fp = fopen("dataset-ascii.txt", "r");
+    puts("\033[0m");
+    FILE *fp = fopen("dataset-ascii.txt", "r");
 
-	int linecounter = 0;
-	char c;
-/*	while(1)
-		putchar((c=fgetc(fp))==EOF ? EOF : c);
+    // checking number of lines
+    int linecounter = 0;
+    char c;
+    while(((c=fgetc(fp)) == '\n' ? ++linecounter : c) != EOF)
+	;
 
-	return 0;*/
-	while(((c=fgetc(fp)) == '\n' ? ++linecounter : c) != EOF)
-		;
-	
-	char *dataset = malloc(sizeof(char)*(linecounter*6) + 1);
-	fseek(fp, 0, SEEK_SET);
+    // putting all words in a database separated by a null character
+    char *dataset = malloc(sizeof(char)*(linecounter*6) + 1);
+    fseek(fp, 0, SEEK_SET);
+    int counter= 0;
+    while((dataset[counter++] = (c=fgetc(fp))=='\n' ? '\0' : c)!=EOF)
+    	;
+    fclose(fp);
 
-	int counter= 0;
-	while((dataset[counter++] = (c=fgetc(fp))=='\n' ? '\0' : c)!=EOF)
-		;
+    srand(time(NULL));
+    int wordIndex = rand() % linecounter;
 
-	srand(time(NULL));
-	int wordIndex = rand() % linecounter;
-	fclose(fp);
+    char debugWord[] = "tonfo";
+    shell(0, debugWord, 1);
 
-	shell(wordIndex, dataset, linecounter);
+    free(dataset);
+    //	shell(wordIndex, dataset, linecounter);
 }
