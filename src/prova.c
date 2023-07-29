@@ -9,6 +9,7 @@ int main()
 
     int nLines = openDataset(&dataset);
 
+    free(dataset);
 //    for(int i = 0; i < nLines; i++)
 //	    printf("%s\n", &dataset[i*6]);
 }

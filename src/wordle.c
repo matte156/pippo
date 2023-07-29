@@ -2,39 +2,7 @@
 #include<stdlib.h>
 #include<time.h>
 #include<string.h>
-
-typedef struct
-{
-    char notContained[6];
-    char wrongPosition[6];
-    char correctPosition[6];
-} response;
-
-int contains(char c, char *word)
-{
-    int numberOfLettersContained = 0;
-    for(int i = 0; i < 5; i++)
-	if(c==word[i])
-	    numberOfLettersContained++;
-    return numberOfLettersContained;
-}
-
-response compare(char *guessWord, char *targetWord)
-{
-    response res;
-    for(int i = 0; i < 5; i++)
-	res.correctPosition[i] = guessWord[i] == targetWord[i] ? targetWord[i] : 'X';
-
-    for(int i = 0; i < 5; i++)
-	res.wrongPosition[i] = (contains(guessWord[i], targetWord) - 
-			       contains(guessWord[i], res.correctPosition) -
-			       contains(guessWord[i], res.wrongPosition)) > 0 &&
-	       		       res.correctPosition[i] == 'X' ? guessWord[i] : 'X';
-
-    res.correctPosition[5] = res.wrongPosition[5] = '\0';
-
-    return res;
-}
+#include"commonFunctions.h"
 
 int max(char *w1, char *w2)
 {
@@ -72,7 +40,7 @@ int shell(int wordPosition, char *dataset, int size)
     int attempts = 0;
     while(attempts < 6)
     {
-	printf("%d> ", attempts);
+	printf("%d> ", attempts + 1);
 	int counter = 0;
 	char input[6], c;
 
@@ -104,8 +72,7 @@ int shell(int wordPosition, char *dataset, int size)
 	    if(!((input[i] >= 'a' && input[i] <= 'z') || (input[i] >= 'A' && input[i] <= 'Z')))
 		valid = 0;
 
-	// per debug. Rimuovere
-	valid = 1;
+	valid = 1; // to debug
 	if(valid == 0)
 	{
 	    printf("\033[0;31mInserisci una parola reale\033[0m\n");
@@ -144,29 +111,17 @@ int shell(int wordPosition, char *dataset, int size)
 
 int main()
 {
-    puts("\033[0m");
-    FILE *fp = fopen("usefulDataset/dataset-ascii.txt", "r");
-
-    // checking number of lines
-    int linecounter = 0;
-    char c;
-    while(((c=fgetc(fp)) == '\n' ? ++linecounter : c) != EOF)
-	;
-
-    // putting all words in a database separated by a null character
-    char *dataset = malloc(sizeof(char)*(linecounter*6) + 1);
-    fseek(fp, 0, SEEK_SET);
-    int counter= 0;
-    while((dataset[counter++] = (c=fgetc(fp))=='\n' ? '\0' : c)!=EOF)
-    	;
-    fclose(fp);
+    printf("\033[0m");
+    
+    char *dataset;
+    int linecounter = openDataset(&dataset);
 
     srand(time(NULL));
     int wordIndex = rand() % linecounter;
 
-    char debugWord[] = "abbey";
+    char debugWord[] = "prova";
     shell(0, debugWord, 1);
+//    shell(wordIndex, dataset, linecounter);
 
     free(dataset);
-    //	shell(wordIndex, dataset, linecounter);
 }
