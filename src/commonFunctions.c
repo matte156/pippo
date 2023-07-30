@@ -3,6 +3,51 @@
 #include<string.h>
 #include"commonFunctions.h"
 
+void printResponse(response res)
+{
+    for(int i = 0; i < 5; i++)
+    {
+        if(res.correctPosition[i] != 'X')
+	    printf("\033[32;1;1m%c\033[0m", res.correctPosition[i]);
+	else if(res.wrongPosition[i] != 'X')
+	    printf("\033[33;1m%c\033[0m", res.wrongPosition[i]);
+	else
+	    putchar(res.notContained[i]);
+    }
+    putchar('\n');
+}
+
+int max(char *w1, char *w2)
+{
+    for(int i = 0; i < 5; i++)
+    {
+	if(w1[i] > w2[i])
+	    return(1);
+	else if(w1[i] < w2[i])
+	    return(2);
+    }
+    return 0;
+}
+
+int checkWordExistence(char *word, char *dataset, int size)
+{
+    int left = 0, right = size;
+
+    while(left <= right)
+    {
+	int pivot = left + (right-left)/2;
+	
+	if(max(word, &dataset[pivot*6]) == 0)
+	    return 1;
+	else if(max(word, &dataset[pivot*6]) == 1)
+	    left = pivot + 1;
+	else if(max(word, &dataset[pivot*6]) == 2) 
+	    right = pivot - 1;
+    }
+
+    return 0;
+}
+
 int contains(char c, char *word)
 {
     int numberOfLettersContained = 0;

@@ -15,6 +15,12 @@ int openDataset(char **dataset);
 // check the number of time that the letter c is contained in word and return it
 int contains(char c, char *word);
 
+// compare the guess try and the target word
 response compare(char *guessWord, char *targetWord);
+
+// check if there if word is present in dataset with size equal size
+int checkWordExistence(char *word, char *dataset, int size);
+
+void printResponse(response res);
 
 #endif
