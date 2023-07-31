@@ -11,7 +11,7 @@ void findAndSubstitute(char *string, char c, char *toSubstitute)
     int bufferCounter = 0;
     int toSubstituteLength = strlen(toSubstitute);
     
-    for(int i = 0; i < 5; i++)
+    for(int i = 0; string[i] != 0; i++)
     {
 	if(string[i] == c)
 	{
@@ -27,7 +27,7 @@ void findAndSubstitute(char *string, char c, char *toSubstitute)
     memcpy(string, buffer, bufferCounter + 1);
 }
 
-int characterFilter(char c, char *dataset, int size)
+int characterFilter(char c, char **dataset, int size)
 {
     regex_t regex;
     char pattern[] = {c, '\0'};
@@ -36,13 +36,14 @@ int characterFilter(char c, char *dataset, int size)
     regcomp(&regex, pattern, REG_EXTENDED);
 
     for(int i = 0; i < size; i++)
-	if(regexec(&regex, &dataset[i*6], 0, NULL, 0)==0)
-	    memcpy(&dataset[(newSize++)*6], &dataset[i*6], 6);
+	if(regexec(&regex, dataset[i], 0, NULL, 0)==0)
+	    dataset[newSize++] = dataset[i];
+	    // memcpy(&dataset[(newSize++)*6], &dataset[i*6], 6);
 
     return newSize;
 }
 
-int regexFilter(char *pattern, char *dataset, int size)
+int regexFilter(char *pattern, char **dataset, int size)
 {
     regex_t regex;
     int newSize = 0;
@@ -50,20 +51,25 @@ int regexFilter(char *pattern, char *dataset, int size)
     regcomp(&regex, pattern, REG_EXTENDED);
 
     for(int i = 0; i < size; i++)
-	if(regexec(&regex, &dataset[i*6], 0, NULL, 0)==0)
-	    memcpy(&dataset[(newSize++)*6], &dataset[i*6], 6);
+	if(regexec(&regex, dataset[i], 0, NULL, 0)==0)
+	    dataset[newSize++] = dataset[i];
+	    // memcpy(&dataset[(newSize++)*6], &dataset[i*6], 6);
 
     return newSize;
 }
 
-int filter(char *dataset, int size, response *res)
+int filter(char *dataset, int size, response *res, char ***filteredDataset)
 {
     char buffer[50];
-    char notContainedCharacters[5];
-    char notContainedCharactersRegex[9];
-    int notContainedCharactersCounter = 0;
+    char notContainedCharacters[5];	// list of not contained characters
+    char regexBuffer[20]; 	 	// regex for exluding not contained characters
+    char wrongPositionChar[5];
+    int notContainedCharactersCounter = 0, wrongPositionCharCounter = 0; // number of not contained characters
     int datasetSize = size;
 
+    char **datasetPointer = malloc(sizeof(char *) * size);
+    for(int i = 0; i < size; i++)
+	datasetPointer[i] = &dataset[i*6];
 
     buffer[0] = '^';
 
@@ -74,33 +80,51 @@ int filter(char *dataset, int size, response *res)
 
 	if(res->correctPosition[i] != 'X')
 	    buffer[i + 1] = res->correctPosition[i];
+
+	// remove all words that have in position i that letter and store the letter in wrongPositionChar
 	else if(res->wrongPosition[i] != 'X')
 	{
-	    char regexBuffer[10] = ".....";
+	    sprintf(regexBuffer, ".....");
 	    char regexSubBuffer[5] = "[^X]";
-	    datasetSize = characterFilter(res->wrongPosition[i], dataset, datasetSize);
+
+	    wrongPositionChar[wrongPositionCharCounter++] = res->wrongPosition[i];
 
 	    regexBuffer[i] = 'X';
 	    regexSubBuffer[2] = res->wrongPosition[i];
 
 	    findAndSubstitute(regexBuffer, 'X', regexSubBuffer);
 
-	    datasetSize = regexFilter(regexBuffer, dataset, datasetSize);
+	    datasetSize = regexFilter(regexBuffer, datasetPointer, datasetSize);
 	}
 	else if(contains(res->notContained[i], res->wrongPosition) == 0)
 	    notContainedCharacters[notContainedCharactersCounter++] = res->notContained[i];
     }
 
+    if(wrongPositionCharCounter != 0)
+    {
+	for(int j = 0; j < wrongPositionCharCounter; j++)
+	{
+	    sprintf(regexBuffer, "(.*X){X}");
+	    regexBuffer[3]= wrongPositionChar[j];
+	    regexBuffer[6] = 1 + contains(wrongPositionChar[j], res->correctPosition) + '0';
+
+	    datasetSize = regexFilter(regexBuffer, datasetPointer, datasetSize);
+	}
+    }
+
     if(notContainedCharactersCounter != 0)
     {
-	sprintf(notContainedCharactersRegex, "[^%.*s]", notContainedCharactersCounter, notContainedCharacters);
-        findAndSubstitute(buffer, '.', notContainedCharactersRegex);
+	sprintf(regexBuffer, "[^%.*s]", notContainedCharactersCounter, notContainedCharacters);
+        findAndSubstitute(buffer, '.', regexBuffer);
     }
     else 
-	buffer[5] = '\0';
+	buffer[6] = '\0';
 
-    datasetSize = regexFilter(buffer, dataset, datasetSize);
+    datasetSize = regexFilter(buffer, datasetPointer, datasetSize);
     //printf("%s", buffer);
+
+    if(filteredDataset != NULL)
+        *filteredDataset = datasetPointer;
 
     return datasetSize;
 }
@@ -131,6 +155,8 @@ int entropyBruteForce(char *dataset, int size)
 
 	int containDoubles;
 
+	double wordEntropy = 0;
+
 	// repeat 3^5 times
 	for(int k = 0; k < 243; k++)
 	{
@@ -149,7 +175,13 @@ int entropyBruteForce(char *dataset, int size)
 
 	    if(containDoubles == 0)
 	    {
-		printResponse(res);
+		//printResponse(res);
+		int newSize = filter(dataset, size, &res, NULL);
+		if(newSize != 0)
+		{
+		    double resEntropy = entropy(size, newSize);
+		    // printf("New Size: %d\n",newSize);
+		}
 	    }
 
 	   // printResponse(res);
@@ -171,6 +203,8 @@ int entropyBruteForce(char *dataset, int size)
 		    res.wrongPosition[j] = 'X';
 	    }
 	}
+
+	printf("The entropy for the word %s is equal to\t%f\n", &dataset[i*6], wordEntropy);
     }
     return 0;
 }
@@ -178,12 +212,15 @@ int entropyBruteForce(char *dataset, int size)
 int main()
 {
     char *dataset;
+    char **filteredDataset;
 
     int linecounter = openDataset(&dataset);
 
-    response res = compare("usalo", "quale");
-
-    /*int newSize = filter(dataset, linecounter, &res);
+    response res = compare("abaca", "abaca");
+ 
+    /*int newSize = filter(dataset, linecounter, &res, &filteredDataset);
+    for(int i = 0; i < newSize; i++)
+	puts(filteredDataset[i]);
 
     for(int i = 0; i < newSize; i++)
     {
@@ -195,4 +232,5 @@ int main()
     entropyBruteForce(dataset, linecounter);
 
     free(dataset);
+    free(filteredDataset);
 }
