@@ -96,7 +96,8 @@ int filter(char *dataset, int size, response *res, char ***filteredDataset)
 
 	    datasetSize = regexFilter(regexBuffer, datasetPointer, datasetSize);
 	}
-	else if(contains(res->notContained[i], res->wrongPosition) == 0)
+	else if(contains(res->notContained[i], res->wrongPosition) == 0 &&
+		contains(res->notContained[i], notContainedCharacters))
 	    notContainedCharacters[notContainedCharactersCounter++] = res->notContained[i];
     }
 
@@ -112,13 +113,12 @@ int filter(char *dataset, int size, response *res, char ***filteredDataset)
 	}
     }
 
+    buffer[6] = '\0';
     if(notContainedCharactersCounter != 0)
     {
 	sprintf(regexBuffer, "[^%.*s]", notContainedCharactersCounter, notContainedCharacters);
         findAndSubstitute(buffer, '.', regexBuffer);
     }
-    else 
-	buffer[6] = '\0';
 
     datasetSize = regexFilter(buffer, datasetPointer, datasetSize);
     //printf("%s", buffer);
@@ -138,7 +138,7 @@ double entropy(int oldLength, int newLength)
 
     double entropy = probability*information;
 
-    printf("Probability: %f; Information: %f; Entropy: %f\n", probability, information, entropy);
+//    printf("Probability: %f; Information: %f; Entropy: %f\n", probability, information, entropy);
 
     return entropy;
 }
@@ -180,6 +180,7 @@ int entropyBruteForce(char *dataset, int size)
 		if(newSize != 0)
 		{
 		    double resEntropy = entropy(size, newSize);
+		    wordEntropy += resEntropy;
 		    // printf("New Size: %d\n",newSize);
 		}
 	    }
@@ -228,6 +229,8 @@ int main()
     }
 
     entropy(linecounter, newSize); */
+
+    printf("parola,entropy\n");
 
     entropyBruteForce(dataset, linecounter);
 
