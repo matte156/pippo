@@ -5,6 +5,11 @@
 #include<math.h>
 #include"commonFunctions.h"
 
+char buffer[50];
+char notContainedCharacters[5];	// list of not contained characters
+char regexBuffer[20]; 	 	// regex for exluding not contained characters
+char wrongPositionChar[5];
+
 void findAndSubstitute(char *string, char c, char *toSubstitute)
 {
     char buffer[50];
@@ -40,6 +45,7 @@ int characterFilter(char c, char **dataset, int size)
 	    dataset[newSize++] = dataset[i];
 	    // memcpy(&dataset[(newSize++)*6], &dataset[i*6], 6);
 
+    regfree(&regex);
     return newSize;
 }
 
@@ -55,15 +61,12 @@ int regexFilter(char *pattern, char **dataset, int size)
 	    dataset[newSize++] = dataset[i];
 	    // memcpy(&dataset[(newSize++)*6], &dataset[i*6], 6);
 
+    regfree(&regex);
     return newSize;
 }
 
 int filter(char *dataset, int size, response *res, char ***filteredDataset)
 {
-    char buffer[50];
-    char notContainedCharacters[5];	// list of not contained characters
-    char regexBuffer[20]; 	 	// regex for exluding not contained characters
-    char wrongPositionChar[5];
     int notContainedCharactersCounter = 0, wrongPositionCharCounter = 0; // number of not contained characters
     int datasetSize = size;
 
@@ -125,6 +128,8 @@ int filter(char *dataset, int size, response *res, char ***filteredDataset)
 
     if(filteredDataset != NULL)
         *filteredDataset = datasetPointer;
+    else
+	free(datasetPointer);
 
     return datasetSize;
 }
