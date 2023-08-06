@@ -3,12 +3,8 @@
 #include<string.h>
 #include<regex.h>
 #include<math.h>
+#include<omp.h>
 #include"commonFunctions.h"
-
-char buffer[50];
-char notContainedCharacters[5];	// list of not contained characters
-char regexBuffer[20]; 	 	// regex for exluding not contained characters
-char wrongPositionChar[5];
 
 void findAndSubstitute(char *string, char c, char *toSubstitute)
 {
@@ -67,6 +63,12 @@ int regexFilter(char *pattern, char **dataset, int size)
 
 int filter(char *dataset, int size, response *res, char ***filteredDataset)
 {
+    char buffer[50];
+    char notContainedCharacters[5];	// list of not contained characters
+    char regexBuffer[20]; 	 	// regex for exluding not contained characters
+    char wrongPositionChar[5];
+
+
     int notContainedCharactersCounter = 0, wrongPositionCharCounter = 0; // number of not contained characters
     int datasetSize = size;
 
@@ -97,6 +99,7 @@ int filter(char *dataset, int size, response *res, char ***filteredDataset)
 
 	    findAndSubstitute(regexBuffer, 'X', regexSubBuffer);
 
+	    #pragma omp barrier
 	    datasetSize = regexFilter(regexBuffer, datasetPointer, datasetSize);
 	}
 	else if(contains(res->notContained[i], res->wrongPosition) == 0 &&
@@ -112,6 +115,7 @@ int filter(char *dataset, int size, response *res, char ***filteredDataset)
 	    regexBuffer[3]= wrongPositionChar[j];
 	    regexBuffer[6] = 1 + contains(wrongPositionChar[j], res->correctPosition) + '0';
 
+	    #pragma omp barrier
 	    datasetSize = regexFilter(regexBuffer, datasetPointer, datasetSize);
 	}
     }
@@ -123,6 +127,7 @@ int filter(char *dataset, int size, response *res, char ***filteredDataset)
         findAndSubstitute(buffer, '.', regexBuffer);
     }
 
+    #pragma omp barrier
     datasetSize = regexFilter(buffer, datasetPointer, datasetSize);
     //printf("%s", buffer);
 
@@ -148,13 +153,16 @@ double entropy(int oldLength, int newLength)
     return entropy;
 }
 
-int entropyBruteForce(char *dataset, int size)
+int entropyBruteForce(char **dataset, int size)
 {
     printf("\033[0m");
     response res;
+    #pragma omp parallel for num_threads(8) private(res) firstprivate(size)
     for(int i = 0; i < size; i++)
     {
-	memcpy(res.notContained, &dataset[i*6], 6);
+	int thread_num = omp_get_thread_num();
+
+	memcpy(res.notContained, &(dataset[thread_num])[i*6], 6);
 	memcpy(res.correctPosition, "XXXXX", 6);
 	memcpy(res.wrongPosition, "XXXXX", 6);
 
@@ -181,7 +189,7 @@ int entropyBruteForce(char *dataset, int size)
 	    if(containDoubles == 0)
 	    {
 		//printResponse(res);
-		int newSize = filter(dataset, size, &res, NULL);
+		int newSize = filter(dataset[thread_num], size, &res, NULL);
 		if(newSize != 0)
 		{
 		    double resEntropy = entropy(size, newSize);
@@ -210,35 +218,36 @@ int entropyBruteForce(char *dataset, int size)
 	    }
 	}
 
-	printf("The entropy for the word %s is equal to\t%f\n", &dataset[i*6], wordEntropy);
+//	printf("The entropy for the word %s is equal to\t%f\n", &(dataset[thread_num])[i*6], wordEntropy);
+	printf("%s,%f\n", &(dataset[thread_num])[i*6], wordEntropy);
     }
     return 0;
 }
 
 int main()
 {
-    char *dataset;
+    char *dataset[8];
     char **filteredDataset;
 
-    int linecounter = openDataset(&dataset);
-
-    response res = compare("abaca", "abaca");
- 
-    /*int newSize = filter(dataset, linecounter, &res, &filteredDataset);
-    for(int i = 0; i < newSize; i++)
-	puts(filteredDataset[i]);
-
-    for(int i = 0; i < newSize; i++)
+    int linecounter = openDataset(&dataset[0]);
+    for(int i = 1; i < 8; i++)
     {
-	printf("%s\n", &dataset[i*6]);
+	dataset[i] = malloc(sizeof(char)*6*linecounter);
+	memcpy(dataset[i], dataset[0], linecounter*6);
     }
 
-    entropy(linecounter, newSize); */
+    response res = compare("abaca", "abaca");
 
     printf("parola,entropy\n");
+    int programPart = linecounter / 8;
+
+//    FILE *fp = fopen("word_entropy.csv")
 
     entropyBruteForce(dataset, linecounter);
 
-    free(dataset);
-    free(filteredDataset);
+    for(int i = 0; i < 8; i++)
+        free(dataset[0]);
+
+//    free(filteredDataset);
+
 }
