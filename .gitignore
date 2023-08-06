@@ -1,3 +1,5 @@
 a.out
 subtlex-it.csv
 *.swp
+session.vim
+word_entropy.csv
